@@ -1,8 +1,7 @@
-use sdl2::rect::Rect;
-use sdl2::render::WindowCanvas;
+use crate::tetrimino::{Movement, Shape, Tetrimino, TetriminoModel};
+use rand::seq::SliceRandom;
 use sdl2::{
-    event::Event, keyboard::Keycode, pixels::Color, pixels::PixelFormatEnum, render::Texture,
-    surface::Surface,
+    event::Event, keyboard::Keycode, pixels::Color, pixels::PixelFormatEnum, surface::Surface,
 };
 use stackvec::TryCollect;
 use std::{error::Error, thread::sleep, time::Duration};
@@ -25,9 +24,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let texture_creator = canvas.texture_creator();
     let mut surface = Surface::new(TILE_SIZE, TILE_SIZE, PixelFormatEnum::RGB24).unwrap();
 
-    let tetriminos = [
-        Shape::I,
+    let mut models = [
         Shape::O,
+        Shape::I,
         Shape::S,
         Shape::Z,
         Shape::L,
@@ -35,20 +34,24 @@ fn main() -> Result<(), Box<dyn Error>> {
         Shape::T,
     ]
     .iter()
-    .map(|shape| {
-        surface
-            .fill_rect(None, shape.color())
-            .expect("Failed to color surface");
-        Tetrimino {
-            shape: *shape,
-            points: shape.points(),
-            texture: surface
-                .as_texture(&texture_creator)
-                .expect("Failed to create texture"),
-        }
-    })
-    .try_collect::<[Tetrimino; 7]>()
-    .expect("Failed to collect Tetriminos");
+    .map(|shape| TetriminoModel::new(*shape, &mut surface, &texture_creator))
+    .try_collect::<[TetriminoModel; 7]>()
+    .expect("Failed to collect Tetrimino models");
+
+    let mut rng = rand::thread_rng();
+    models.shuffle(&mut rng);
+
+    let mut models_iterator = models.iter_mut();
+
+    let current_model = models_iterator.next().expect("Failed to get next model");
+
+    let mut current_states = current_model.states.clone().cycle().peekable();
+    let mut current_tetrimino = Tetrimino {
+        coords: (5, 10),
+        current_state: current_states.next().expect("Failed to get current states"),
+        states: current_states,
+        texture: &current_model.texture,
+    };
 
     let mut event_pump = sdl_context
         .event_pump()
@@ -62,6 +65,14 @@ fn main() -> Result<(), Box<dyn Error>> {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => break 'running,
+                Event::KeyDown {
+                    keycode: Some(key), ..
+                } => match key {
+                    Keycode::Up => current_tetrimino.advance(Movement::Rotate),
+                    Keycode::Left => current_tetrimino.advance(Movement::Left),
+                    Keycode::Right => current_tetrimino.advance(Movement::Right),
+                    _ => (),
+                },
                 _ => (),
             }
         }
@@ -69,12 +80,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         canvas.set_draw_color(Color::BLACK);
         canvas.clear();
 
-        let t = &tetriminos[6];
-        t.draw(&mut canvas);
+        current_tetrimino.render(&mut canvas, (TILE_SIZE, TILE_SIZE));
 
         canvas.present();
 
-        sleep(Duration::new(1, 1_000_000_000 / 60));
+        sleep(Duration::new(0, 1_000_000_000 / 60));
     }
 
     Ok(())
