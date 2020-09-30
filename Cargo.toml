@@ -8,5 +8,7 @@ edition = "2018"
 
 [dependencies]
 sdl2 = "0.34.3"
-stackvec = "0.2.1"
 rand = "0.7.3"
+arrayvec = "0.5.1"
+strum = "0.19.2"
+strum_macros ="0.19.2"

@@ -12,7 +12,6 @@ use std::{
 
 type Point = (i8, i8);
 
-#[derive(Copy, Clone)]
 pub enum Movement {
     Left,
     Right,
@@ -20,7 +19,7 @@ pub enum Movement {
     Rotate,
 }
 
-#[derive(Copy, Clone)]
+#[derive(EnumCount, EnumIter)]
 pub enum Shape {
     O,
     I,
@@ -32,7 +31,7 @@ pub enum Shape {
 }
 
 pub struct TetriminoModel<'a> {
-    pub texture: Texture<'a>,
+    pub texture: sdl2::render::Texture<'a>,
     pub states: Iter<'a, [Point; 4]>,
 }
 
@@ -104,10 +103,10 @@ impl<'a> TetriminoModel<'a> {
             texture: {
                 surface
                     .fill_rect(None, color)
-                    .unwrap_or_else(|err| panic!(err));
+                    .expect("Failed to color Surface");
                 surface
                     .as_texture(texture_creator)
-                    .expect("Failed to create texture")
+                    .expect("Failed to create Texture")
             },
             states,
         }
@@ -122,8 +121,17 @@ pub struct Tetrimino<'a> {
 }
 
 impl<'a> Tetrimino<'a> {
+    pub fn new(coords: (i8, i8), model: &'a TetriminoModel) -> Self {
+        let mut states = model.states.clone().cycle().peekable();
+        Self {
+            coords,
+            current_state: states.next().expect("Failed to get next Tetrimino state"),
+            states,
+            texture: &model.texture,
+        }
+    }
+
     pub fn render(&self, canvas: &mut WindowCanvas, (width, height): (u32, u32)) {
-        let (_, canvas_h) = canvas.output_size().unwrap_or_else(|err| panic!(err));
         for (x, y) in self.current_state.iter() {
             canvas
                 .copy(
@@ -131,12 +139,12 @@ impl<'a> Tetrimino<'a> {
                     None,
                     Rect::new(
                         (*x + self.coords.0) as i32 * width as i32,
-                        canvas_h as i32 - (*y + self.coords.1) as i32 * height as i32,
+                        crate::HEIGHT as i32 - (*y + self.coords.1) as i32 * height as i32,
                         width,
                         height,
                     ),
                 )
-                .unwrap_or_else(|err| panic!(err))
+                .expect("Failed to copy Texture into Canvas")
         }
     }
 
