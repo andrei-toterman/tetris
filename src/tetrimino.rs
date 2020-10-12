@@ -1,3 +1,4 @@
+use crate::{HEIGHT, TILE_SIZE};
 use sdl2::{
     pixels::Color,
     rect::Rect,
@@ -10,8 +11,9 @@ use std::{
     slice::Iter,
 };
 
-type Point = (i8, i8);
+pub type Point = (i8, i8);
 
+#[derive(Copy, Clone, PartialEq)]
 pub enum Movement {
     Left,
     Right,
@@ -42,58 +44,58 @@ impl<'a> TetriminoModel<'a> {
         texture_creator: &'a TextureCreator<WindowContext>,
     ) -> Self {
         let (color, states) = match shape {
-            Shape::O => (Color::BLUE, [[(0, 0), (1, 0), (0, 1), (1, 1)]].iter()),
+            Shape::O => (Color::BLUE, [[(1, 1), (0, 1), (1, 0), (0, 0)]].iter()),
             Shape::I => (
                 Color::CYAN,
                 [
-                    [(1, 0), (1, -1), (1, 1), (1, 2)],
-                    [(0, 0), (-1, 0), (1, 0), (2, 0)],
+                    [(1, 2), (1, 1), (1, 0), (1, -1)],
+                    [(2, 0), (1, 0), (-1, 0), (0, 0)],
                 ]
                 .iter(),
             ),
             Shape::S => (
                 Color::YELLOW,
                 [
-                    [(0, 0), (0, 1), (1, 0), (1, -1)],
-                    [(0, 0), (1, 0), (0, -1), (-1, -1)],
+                    [(0, 1), (1, 0), (0, 0), (1, -1)],
+                    [(1, 0), (0, 0), (0, -1), (-1, -1)],
                 ]
                 .iter(),
             ),
             Shape::Z => (
                 Color::GREEN,
                 [
-                    [(0, 0), (1, 0), (1, 1), (0, -1)],
-                    [(0, 0), (-1, 0), (0, -1), (1, -1)],
+                    [(1, 1), (1, 0), (0, 0), (0, -1)],
+                    [(0, 0), (-1, 0), (1, -1), (0, -1)],
                 ]
                 .iter(),
             ),
             Shape::L => (
                 Color::RED,
                 [
-                    [(0, 0), (0, 1), (0, -1), (1, -1)],
-                    [(0, 0), (1, 0), (-1, 0), (-1, -1)],
-                    [(0, 0), (0, -1), (0, 1), (-1, 1)],
-                    [(0, 0), (-1, 0), (1, 0), (1, 1)],
+                    [(0, 1), (0, 0), (1, -1), (0, -1)],
+                    [(1, 0), (0, 0), (-1, 0), (-1, -1)],
+                    [(0, 1), (-1, 1), (0, 0), (0, -1)],
+                    [(1, 1), (1, 0), (0, 0), (-1, 0)],
                 ]
                 .iter(),
             ),
             Shape::J => (
                 Color::RGB(255, 165, 0),
                 [
-                    [(0, 0), (0, 1), (0, -1), (-1, -1)],
-                    [(0, 0), (1, 0), (-1, 0), (-1, 1)],
-                    [(0, 0), (0, -1), (0, 1), (1, 1)],
-                    [(0, 0), (-1, 0), (1, 0), (1, -1)],
+                    [(0, 1), (0, 0), (0, -1), (-1, -1)],
+                    [(-1, 1), (1, 0), (0, 0), (-1, 0)],
+                    [(1, 1), (0, 1), (0, 0), (0, -1)],
+                    [(1, 0), (0, 0), (-1, 0), (1, -1)],
                 ]
                 .iter(),
             ),
             Shape::T => (
                 Color::MAGENTA,
                 [
-                    [(0, 0), (-1, 0), (0, 1), (1, 0)],
-                    [(0, 0), (0, 1), (1, 0), (0, -1)],
-                    [(0, 0), (1, 0), (0, -1), (-1, 0)],
-                    [(0, 0), (0, -1), (-1, 0), (0, 1)],
+                    [(0, 1), (1, 0), (0, 0), (-1, 0)],
+                    [(0, 1), (1, 0), (0, 0), (0, -1)],
+                    [(1, 0), (0, 0), (-1, 0), (0, -1)],
+                    [(0, 1), (0, 0), (-1, 0), (0, -1)],
                 ]
                 .iter(),
             ),
@@ -114,9 +116,9 @@ impl<'a> TetriminoModel<'a> {
 }
 
 pub struct Tetrimino<'a> {
-    pub coords: (i8, i8),
-    pub current_state: &'a [Point; 4],
-    pub states: Peekable<Cycle<Iter<'a, [Point; 4]>>>,
+    coords: (i8, i8),
+    current_state: &'a [Point; 4],
+    states: Peekable<Cycle<Iter<'a, [Point; 4]>>>,
     pub texture: &'a Texture<'a>,
 }
 
@@ -131,24 +133,25 @@ impl<'a> Tetrimino<'a> {
         }
     }
 
-    pub fn render(&self, canvas: &mut WindowCanvas, (width, height): (u32, u32)) {
+    pub fn render(&self, canvas: &mut WindowCanvas) {
         for (x, y) in self.current_state.iter() {
             canvas
                 .copy(
                     &self.texture,
                     None,
                     Rect::new(
-                        (*x + self.coords.0) as i32 * width as i32,
-                        crate::HEIGHT as i32 - (*y + self.coords.1) as i32 * height as i32,
-                        width,
-                        height,
+                        (*x + self.coords.0) as i32 * TILE_SIZE as i32,
+                        (HEIGHT * TILE_SIZE) as i32
+                            - (*y + self.coords.1 + 1) as i32 * TILE_SIZE as i32,
+                        TILE_SIZE,
+                        TILE_SIZE,
                     ),
                 )
                 .expect("Failed to copy Texture into Canvas")
         }
     }
 
-    pub fn next(&mut self, movement: Movement) -> [Point; 4] {
+    pub fn next_state(&mut self, movement: Movement) -> [Point; 4] {
         let mut result = *self.current_state;
 
         match movement {
@@ -168,6 +171,15 @@ impl<'a> Tetrimino<'a> {
             *y += self.coords.1;
         });
 
+        result
+    }
+
+    pub fn current_state(&self) -> [Point; 4] {
+        let mut result = *self.current_state;
+        result.iter_mut().for_each(|(x, y)| {
+            *x += self.coords.0;
+            *y += self.coords.1;
+        });
         result
     }
 
