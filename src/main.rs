@@ -1,4 +1,3 @@
-use crate::tetrimino::{Movement, Shape, Tetrimino, TetriminoModel};
 use arrayvec::ArrayVec;
 use rand::seq::SliceRandom;
 use sdl2::{
@@ -12,11 +11,12 @@ use strum::{EnumCount, IntoEnumIterator};
 
 mod game;
 mod tetrimino;
+use crate::tetrimino::{Movement, Shape, Tetrimino, TetriminoModel};
 
 const TILE_SIZE: u32 = 32;
 const WIDTH: u32 = 10;
 const HEIGHT: u32 = 20;
-const SPAWN: (i8, i8) = (WIDTH as i8 / 2 - 1, HEIGHT as i8 + 1);
+const SPAWN_COORDS: (i8, i8) = (WIDTH as i8 / 2 - 1, HEIGHT as i8 + 1);
 
 fn main() {
     let sdl_context = sdl2::init().expect("Failed to initialize SDL2 Context");
@@ -31,8 +31,11 @@ fn main() {
         .present_vsync()
         .build()
         .expect("Failed to build Canvas");
-    canvas.set_draw_color(Color::BLACK);
+    let mut event_pump = sdl_context
+        .event_pump()
+        .expect("Failed to acquire SDL2 Event Pump");
 
+    canvas.set_draw_color(Color::BLACK);
     let texture_creator = canvas.texture_creator();
     let mut surface = Surface::new(TILE_SIZE, TILE_SIZE, PixelFormatEnum::RGB24)
         .expect("Failed to create Surface");
@@ -49,19 +52,13 @@ fn main() {
         })
         .flatten();
 
-    let mut current_tetrimino = Tetrimino::new(
-        SPAWN,
+    let mut tetrimino = Tetrimino::new(
+        SPAWN_COORDS,
         models_bag
             .next()
             .expect("Failed to get next Tetrimino Model"),
     );
-
-    let mut event_pump = sdl_context
-        .event_pump()
-        .expect("Failed to acquire SDL2 Event Pump");
-
-    let mut movement = Some(Movement::Down);
-
+    let mut movement = None;
     let mut field = game::Field(ArrayVec::from(
         [[None; WIDTH as usize]; HEIGHT as usize + 4],
     ));
@@ -85,15 +82,14 @@ fn main() {
         }
 
         if let Some(movement) = movement.take() {
-            let next_state_coords = current_tetrimino.next_state(movement);
-            if field.is_not_occupied(next_state_coords) {
-                current_tetrimino.advance(movement);
+            if field.is_not_occupied(tetrimino.next_state(movement)) {
+                tetrimino.advance(movement);
             } else if movement == Movement::Down {
-                let current_state_coords = current_tetrimino.current_state();
-                field.set_occupied(current_state_coords, &current_tetrimino.texture);
+                let current_state_coords = tetrimino.current_state();
+                field.set_occupied(current_state_coords, &tetrimino.texture);
                 field.update_lines(current_state_coords);
-                current_tetrimino = Tetrimino::new(
-                    SPAWN,
+                tetrimino = Tetrimino::new(
+                    SPAWN_COORDS,
                     models_bag
                         .next()
                         .expect("Failed to get next Tetrimino Model"),
@@ -102,10 +98,8 @@ fn main() {
         }
 
         canvas.clear();
-
-        current_tetrimino.render(&mut canvas);
+        tetrimino.render(&mut canvas);
         field.render(&mut canvas);
-
         canvas.present();
 
         sleep(Duration::new(0, 1_000_000_000 / 60));
