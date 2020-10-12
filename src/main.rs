@@ -14,8 +14,9 @@ mod game;
 mod tetrimino;
 
 const TILE_SIZE: u32 = 32;
-const WIDTH: u32 = 10 * TILE_SIZE;
-const HEIGHT: u32 = 20 * TILE_SIZE;
+const WIDTH: u32 = 10;
+const HEIGHT: u32 = 20;
+const SPAWN: (i8, i8) = (WIDTH as i8 / 2 - 1, HEIGHT as i8 + 1);
 
 fn main() {
     let sdl_context = sdl2::init().expect("Failed to initialize SDL2 Context");
@@ -23,7 +24,7 @@ fn main() {
         .video()
         .expect("Failed to acquire Video Context");
     let mut canvas = video_subsystem
-        .window("Tetris", WIDTH, HEIGHT)
+        .window("Tetris", WIDTH * TILE_SIZE, HEIGHT * TILE_SIZE)
         .build()
         .expect("Failed to build Window")
         .into_canvas()
@@ -41,16 +42,15 @@ fn main() {
         .collect::<ArrayVec<[_; Shape::COUNT]>>();
 
     let mut rng = rand::thread_rng();
-    let mut models_bag = iter::repeat(ArrayVec::<[_; Shape::COUNT]>::from_iter(0..))
-        .map(|mut indices| {
-            indices.shuffle(&mut rng);
-            indices
+    let mut models_bag = iter::repeat(ArrayVec::<[_; Shape::COUNT]>::from_iter(&models))
+        .map(|mut models_refs| {
+            models_refs.shuffle(&mut rng);
+            models_refs
         })
-        .flatten()
-        .map(|index| &models[index]);
+        .flatten();
 
     let mut current_tetrimino = Tetrimino::new(
-        (5, 10),
+        SPAWN,
         models_bag
             .next()
             .expect("Failed to get next Tetrimino Model"),
@@ -60,6 +60,12 @@ fn main() {
         .event_pump()
         .expect("Failed to acquire SDL2 Event Pump");
 
+    let mut movement = Some(Movement::Down);
+
+    let mut field = game::Field(ArrayVec::from(
+        [[None; WIDTH as usize]; HEIGHT as usize + 4],
+    ));
+
     'game: loop {
         for event in event_pump.poll_iter() {
             match event {
@@ -68,27 +74,37 @@ fn main() {
                     keycode: Some(key), ..
                 } => match key {
                     Keycode::Escape => break 'game,
-                    Keycode::Up => current_tetrimino.advance(Movement::Rotate),
-                    Keycode::Left => current_tetrimino.advance(Movement::Left),
-                    Keycode::Right => current_tetrimino.advance(Movement::Right),
-                    Keycode::Down => current_tetrimino.advance(Movement::Down),
-                    Keycode::Space => {
-                        current_tetrimino = Tetrimino::new(
-                            current_tetrimino.coords,
-                            models_bag
-                                .next()
-                                .expect("Failed to get next Tetrimino Model"),
-                        )
-                    }
+                    Keycode::Up => movement = Some(Movement::Rotate),
+                    Keycode::Left => movement = Some(Movement::Left),
+                    Keycode::Right => movement = Some(Movement::Right),
+                    Keycode::Down => movement = Some(Movement::Down),
                     _ => (),
                 },
                 _ => (),
             }
         }
 
+        if let Some(movement) = movement.take() {
+            let next_state_coords = current_tetrimino.next_state(movement);
+            if field.is_not_occupied(next_state_coords) {
+                current_tetrimino.advance(movement);
+            } else if movement == Movement::Down {
+                let current_state_coords = current_tetrimino.current_state();
+                field.set_occupied(current_state_coords, &current_tetrimino.texture);
+                field.update_lines(current_state_coords);
+                current_tetrimino = Tetrimino::new(
+                    SPAWN,
+                    models_bag
+                        .next()
+                        .expect("Failed to get next Tetrimino Model"),
+                );
+            }
+        }
+
         canvas.clear();
 
-        current_tetrimino.render(&mut canvas, (TILE_SIZE, TILE_SIZE));
+        current_tetrimino.render(&mut canvas);
+        field.render(&mut canvas);
 
         canvas.present();
 
