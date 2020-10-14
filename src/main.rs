@@ -63,6 +63,11 @@ fn main() {
         [[None; WIDTH as usize]; HEIGHT as usize + 4],
     ));
 
+    let scores_per_lines = [0, 40, 100, 300, 1200];
+    let mut total_cleared_lines = 0;
+    let mut score = 0;
+    let mut level = 0;
+
     'game: loop {
         for event in event_pump.poll_iter() {
             match event {
@@ -82,12 +87,17 @@ fn main() {
         }
 
         if let Some(movement) = movement.take() {
-            if field.is_not_occupied(tetrimino.next_state(movement)) {
+            if !field.is_occupied(tetrimino.next_state(movement)) {
                 tetrimino.advance(movement);
             } else if movement == Movement::Down {
                 let current_state_coords = tetrimino.current_state();
                 field.set_occupied(current_state_coords, &tetrimino.texture);
-                field.update_lines(current_state_coords);
+
+                let cleared_lines = field.update_lines(current_state_coords);
+                total_cleared_lines += cleared_lines;
+                score += (level + 1) * scores_per_lines[cleared_lines as usize];
+                level = total_cleared_lines / 10;
+
                 tetrimino = Tetrimino::new(
                     SPAWN_COORDS,
                     models_bag

@@ -8,8 +8,8 @@ pub struct Field<'a>(
 );
 
 impl<'a> Field<'a> {
-    pub fn is_not_occupied(&self, points: [Point; 4]) -> bool {
-        !points.iter().any(|(x, y)| {
+    pub fn is_occupied(&self, points: [Point; 4]) -> bool {
+        points.iter().any(|(x, y)| {
             (*y < 0 || *x < 0 || *x >= WIDTH as i8) || self.0[*y as usize][*x as usize].is_some()
         })
     }
@@ -20,14 +20,17 @@ impl<'a> Field<'a> {
             .for_each(|(x, y)| self.0[*y as usize][*x as usize] = Some(texture));
     }
 
-    pub fn update_lines(&mut self, points: [Point; 4]) {
+    pub fn update_lines(&mut self, points: [Point; 4]) -> u32 {
+        let mut number_of_lines = 0;
         points.iter().for_each(|(_, y)| {
             if self.0[*y as usize].iter().all(|x_line| x_line.is_some()) {
                 let mut x_line = self.0.remove(*y as usize);
                 x_line.iter_mut().for_each(|cell| *cell = None);
                 self.0.push(x_line);
+                number_of_lines += 1;
             }
         });
+        number_of_lines
     }
 
     pub fn render(&self, canvas: &mut WindowCanvas) {
