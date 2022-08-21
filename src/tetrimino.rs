@@ -106,10 +106,10 @@ impl<'a> TetriminoModel<'a> {
             texture: {
                 surface
                     .fill_rect(None, color)
-                    .expect("Failed to color Surface");
+                    .expect("failed to color surface");
                 surface
                     .as_texture(texture_creator)
-                    .expect("Failed to create Texture")
+                    .expect("failed to create texture")
             },
             states,
         }
@@ -128,7 +128,7 @@ impl<'a> Tetrimino<'a> {
         let mut states = model.states.clone().cycle().peekable();
         Self {
             coords,
-            current_state: states.next().expect("Failed to get next Tetrimino state"),
+            current_state: states.next().expect("failed to get next tetrimino state"),
             states,
             texture: &model.texture,
         }
@@ -148,7 +148,7 @@ impl<'a> Tetrimino<'a> {
                         TILE_SIZE,
                     ),
                 )
-                .expect("Failed to copy Texture into Canvas")
+                .expect("failed to copy texture into canvas")
         }
     }
 
@@ -163,7 +163,7 @@ impl<'a> Tetrimino<'a> {
                 result = **self
                     .states
                     .peek()
-                    .expect("Failed to peek next Tetrimino state")
+                    .expect("failed to peek next tetrimino state")
             }
         };
 
@@ -193,7 +193,7 @@ impl<'a> Tetrimino<'a> {
                 self.current_state = self
                     .states
                     .next()
-                    .expect("Failed to get next Tetrimino state")
+                    .expect("failed to get next tetrimino state")
             }
         }
     }

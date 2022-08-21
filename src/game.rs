@@ -50,7 +50,7 @@ impl<'a> Field<'a> {
                                 TILE_SIZE,
                             ),
                         )
-                        .expect("Failed to copy Texture into Canvas")
+                        .expect("failed to copy texture into canvas")
                 }
             }
         }

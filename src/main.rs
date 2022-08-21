@@ -16,26 +16,22 @@ const HEIGHT: u32 = 20;
 const SPAWN_COORDS: (i8, i8) = (WIDTH as i8 / 2 - 1, HEIGHT as i8 + 1);
 
 fn main() {
-    let sdl_context = sdl2::init().expect("Failed to initialize SDL2 Context");
-    let video_subsystem = sdl_context
-        .video()
-        .expect("Failed to acquire Video Context");
+    let sdl2 = sdl2::init().expect("failed to initialize sdl2");
+    let video_subsystem = sdl2.video().expect("failed to get video subsystem");
     let mut canvas = video_subsystem
         .window("Tetris", WIDTH * TILE_SIZE, HEIGHT * TILE_SIZE)
         .build()
-        .expect("Failed to build Window")
+        .expect("failed to build window")
         .into_canvas()
         .present_vsync()
         .build()
-        .expect("Failed to build Canvas");
-    let mut event_pump = sdl_context
-        .event_pump()
-        .expect("Failed to acquire SDL2 Event Pump");
+        .expect("failed to build canvas");
+    let mut event_pump = sdl2.event_pump().expect("failed to get event pump");
 
     canvas.set_draw_color(Color::BLACK);
     let texture_creator = canvas.texture_creator();
     let mut surface = Surface::new(TILE_SIZE, TILE_SIZE, PixelFormatEnum::RGB24)
-        .expect("Failed to create Surface");
+        .expect("failed to create surface");
 
     let models = Shape::iter()
         .map(|shape| TetriminoModel::new(shape, &mut surface, &texture_creator))
@@ -52,7 +48,7 @@ fn main() {
         SPAWN_COORDS,
         models_bag
             .next()
-            .expect("Failed to get next Tetrimino Model"),
+            .expect("failed to get next tetrimino model"),
     );
     let mut movement = None;
     let mut field = game::Field(ArrayVec::from(
@@ -98,7 +94,7 @@ fn main() {
                     SPAWN_COORDS,
                     models_bag
                         .next()
-                        .expect("Failed to get next Tetrimino Model"),
+                        .expect("failed to get next tetrimino model"),
                 );
             }
         }
@@ -111,5 +107,5 @@ fn main() {
         sleep(Duration::new(0, 1_000_000_000 / 60));
     }
 
-    println! {"{score}"};
+    println!("{score}");
 }
