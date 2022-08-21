@@ -4,12 +4,22 @@ use rand::seq::SliceRandom;
 use sdl2::{
     event::Event, keyboard::Keycode, pixels::Color, pixels::PixelFormatEnum, surface::Surface,
 };
-use std::{iter, iter::FromIterator, thread::sleep, time::Duration};
+use std::{
+    boxed::Box,
+    iter,
+    iter::FromIterator,
+    sync::{Arc, RwLock},
+    thread::sleep,
+    time::Duration,
+};
 use strum::{EnumCount, IntoEnumIterator};
 
 mod game;
 mod tetrimino;
 
+struct Tick;
+
+const TICK_SPEED: u32 = 500;
 const TILE_SIZE: u32 = 32;
 const WIDTH: u32 = 10;
 const HEIGHT: u32 = 20;
@@ -27,6 +37,12 @@ fn main() {
         .build()
         .expect("failed to build canvas");
     let mut event_pump = sdl2.event_pump().expect("failed to get event pump");
+    let event_subsystem = sdl2.event().expect("failed to get event pump");
+    let timer_subsystem = sdl2.timer().expect("failed to get timer subsystem");
+
+    event_subsystem
+        .register_custom_event::<Tick>()
+        .expect("failed to register tick event");
 
     canvas.set_draw_color(Color::BLACK);
     let texture_creator = canvas.texture_creator();
@@ -59,11 +75,26 @@ fn main() {
     let mut total_cleared_lines = 0;
     let mut score = 0;
     let mut level = 0;
+    let tick_speed = Arc::new(RwLock::new(TICK_SPEED));
+    let timer_tick_speed = tick_speed.clone();
+    let _timer = timer_subsystem.add_timer(
+        TICK_SPEED,
+        Box::new(|| {
+            event_subsystem
+                .push_custom_event(Tick)
+                .expect("failed to push tick event");
+            *timer_tick_speed.read().expect("failed to lock tick speed")
+        }),
+    );
 
     'game: loop {
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. } => break 'game,
+                Event::KeyUp {
+                    keycode: Some(Keycode::Down),
+                    ..
+                } => *tick_speed.write().expect("failed to lock tick speed") = TICK_SPEED,
                 Event::KeyDown {
                     keycode: Some(key), ..
                 } => match key {
@@ -71,9 +102,16 @@ fn main() {
                     Keycode::Up => movement = Some(Movement::Rotate),
                     Keycode::Left => movement = Some(Movement::Left),
                     Keycode::Right => movement = Some(Movement::Right),
-                    Keycode::Down => movement = Some(Movement::Down),
+                    Keycode::Down => {
+                        movement = Some(Movement::Down);
+                        *tick_speed.write().expect("failed to lock tick speed") = TICK_SPEED / 10;
+                    }
                     _ => (),
                 },
+                event if event.as_user_event_type::<Tick>().is_some() => {
+                    movement = Some(Movement::Down)
+                }
+
                 _ => (),
             }
         }
