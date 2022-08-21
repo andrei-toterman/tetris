@@ -1,10 +1,12 @@
 use crate::{tetrimino::Point, HEIGHT, TILE_SIZE, WIDTH};
 use arrayvec::ArrayVec;
-use sdl2::rect::Rect;
-use sdl2::render::{Texture, WindowCanvas};
+use sdl2::{
+    rect::Rect,
+    render::{Texture, WindowCanvas},
+};
 
 pub struct Field<'a>(
-    pub ArrayVec<[[Option<&'a Texture<'a>>; WIDTH as usize]; HEIGHT as usize + 4]>,
+    pub ArrayVec<[Option<&'a Texture<'a>>; WIDTH as usize], { HEIGHT as usize + 4 }>,
 );
 
 impl<'a> Field<'a> {

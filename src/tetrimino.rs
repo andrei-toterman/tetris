@@ -10,10 +10,11 @@ use std::{
     iter::{Cycle, Peekable},
     slice::Iter,
 };
+use strum::{EnumCount, EnumIter};
 
 pub type Point = (i8, i8);
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Movement {
     Left,
     Right,
@@ -33,7 +34,7 @@ pub enum Shape {
 }
 
 pub struct TetriminoModel<'a> {
-    pub texture: sdl2::render::Texture<'a>,
+    pub texture: Texture<'a>,
     pub states: Iter<'a, [Point; 4]>,
 }
 
@@ -137,7 +138,7 @@ impl<'a> Tetrimino<'a> {
         for (x, y) in self.current_state.iter() {
             canvas
                 .copy(
-                    &self.texture,
+                    self.texture,
                     None,
                     Rect::new(
                         (*x + self.coords.0) as i32 * TILE_SIZE as i32,
@@ -189,7 +190,7 @@ impl<'a> Tetrimino<'a> {
             Movement::Right => self.coords.0 += 1,
             Movement::Down => self.coords.1 -= 1,
             Movement::Rotate => {
-                self.current_state = &self
+                self.current_state = self
                     .states
                     .next()
                     .expect("Failed to get next Tetrimino state")

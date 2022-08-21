@@ -1,17 +1,14 @@
+use crate::tetrimino::{Movement, Shape, Tetrimino, TetriminoModel};
 use arrayvec::ArrayVec;
 use rand::seq::SliceRandom;
 use sdl2::{
     event::Event, keyboard::Keycode, pixels::Color, pixels::PixelFormatEnum, surface::Surface,
 };
 use std::{iter, iter::FromIterator, thread::sleep, time::Duration};
-
-#[macro_use]
-extern crate strum_macros;
 use strum::{EnumCount, IntoEnumIterator};
 
 mod game;
 mod tetrimino;
-use crate::tetrimino::{Movement, Shape, Tetrimino, TetriminoModel};
 
 const TILE_SIZE: u32 = 32;
 const WIDTH: u32 = 10;
@@ -42,15 +39,14 @@ fn main() {
 
     let models = Shape::iter()
         .map(|shape| TetriminoModel::new(shape, &mut surface, &texture_creator))
-        .collect::<ArrayVec<[_; Shape::COUNT]>>();
+        .collect::<ArrayVec<_, { Shape::COUNT }>>();
 
     let mut rng = rand::thread_rng();
-    let mut models_bag = iter::repeat(ArrayVec::<[_; Shape::COUNT]>::from_iter(&models))
-        .map(|mut models_refs| {
+    let mut models_bag = iter::repeat(ArrayVec::<_, { Shape::COUNT }>::from_iter(&models))
+        .flat_map(|mut models_refs| {
             models_refs.shuffle(&mut rng);
             models_refs
-        })
-        .flatten();
+        });
 
     let mut tetrimino = Tetrimino::new(
         SPAWN_COORDS,
@@ -91,7 +87,7 @@ fn main() {
                 tetrimino.advance(movement);
             } else if movement == Movement::Down {
                 let current_state_coords = tetrimino.current_state();
-                field.set_occupied(current_state_coords, &tetrimino.texture);
+                field.set_occupied(current_state_coords, tetrimino.texture);
 
                 let cleared_lines = field.update_lines(current_state_coords);
                 total_cleared_lines += cleared_lines;
@@ -114,4 +110,6 @@ fn main() {
 
         sleep(Duration::new(0, 1_000_000_000 / 60));
     }
+
+    println! {"{score}"};
 }
