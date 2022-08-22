@@ -5,7 +5,7 @@ authors = ["andrei"]
 edition = "2021"
 
 [dependencies]
-sdl2 = "0.35.2"
+sdl2 = { version = "0.35.2", features = ["ttf"] }
 rand = "0.8.5"
 arrayvec = "0.7.2"
 strum = { version = "0.24.1", features = ["derive"] }

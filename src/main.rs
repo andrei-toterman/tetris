@@ -2,7 +2,8 @@ use crate::tetrimino::{Movement, Shape, Tetrimino, TetriminoModel};
 use arrayvec::ArrayVec;
 use rand::seq::SliceRandom;
 use sdl2::{
-    event::Event, keyboard::Keycode, pixels::Color, pixels::PixelFormatEnum, surface::Surface,
+    event::Event, keyboard::Keycode, pixels::Color, pixels::PixelFormatEnum, rect::Rect,
+    surface::Surface,
 };
 use std::{
     boxed::Box,
@@ -39,6 +40,13 @@ fn main() {
     let mut event_pump = sdl2.event_pump().expect("failed to get event pump");
     let event_subsystem = sdl2.event().expect("failed to get event pump");
     let timer_subsystem = sdl2.timer().expect("failed to get timer subsystem");
+    let ttf_subsystem = sdl2::ttf::init().expect("failed to get ttf subsystem");
+
+    let font = sdl2::rwops::RWops::from_bytes(include_bytes!("font.ttf"))
+        .expect("failed to load font into rwops");
+    let font = ttf_subsystem
+        .load_font_from_rwops(font, 12)
+        .expect("failed to load font from rwops");
 
     event_subsystem
         .register_custom_event::<Tick>()
@@ -70,11 +78,10 @@ fn main() {
     let mut field = game::Field(ArrayVec::from(
         [[None; WIDTH as usize]; HEIGHT as usize + 4],
     ));
-
     let scores_per_lines = [0, 40, 100, 300, 1200];
     let mut total_cleared_lines = 0;
     let mut score = 0;
-    let mut level = 0;
+    let mut level = 1;
     let tick_speed = Arc::new(RwLock::new(TICK_SPEED));
     let timer_tick_speed = tick_speed.clone();
     let _timer = timer_subsystem.add_timer(
@@ -125,8 +132,8 @@ fn main() {
 
                 let cleared_lines = field.update_lines(current_state_coords);
                 total_cleared_lines += cleared_lines;
-                score += (level + 1) * scores_per_lines[cleared_lines as usize];
-                level = total_cleared_lines / 10;
+                score += level * scores_per_lines[cleared_lines as usize];
+                level = total_cleared_lines / 10 + 1;
 
                 tetrimino = Tetrimino::new(
                     SPAWN_COORDS,
@@ -140,8 +147,26 @@ fn main() {
         canvas.clear();
         tetrimino.render(&mut canvas);
         field.render(&mut canvas);
-        canvas.present();
+        let score = score.to_string();
+        canvas
+            .copy(
+                &font
+                    .render(&score)
+                    .solid(Color::WHITE)
+                    .expect("failed to render score to surface")
+                    .as_texture(&texture_creator)
+                    .expect("failed to render score to texture"),
+                None,
+                Rect::new(
+                    (WIDTH * TILE_SIZE) as i32 - 30 * score.len() as i32,
+                    5,
+                    30 * score.len() as u32,
+                    30,
+                ),
+            )
+            .expect("failed to copy score texture to canvas");
 
+        canvas.present();
         sleep(Duration::new(0, 1_000_000_000 / 60));
     }
 
