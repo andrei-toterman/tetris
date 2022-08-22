@@ -135,15 +135,15 @@ impl<'a> Tetrimino<'a> {
     }
 
     pub fn render(&self, canvas: &mut WindowCanvas) {
-        for (x, y) in self.current_state.iter() {
+        for &(x, y) in self.current_state.iter() {
             canvas
                 .copy(
                     self.texture,
                     None,
                     Rect::new(
-                        (*x + self.coords.0) as i32 * TILE_SIZE as i32,
+                        (x + self.coords.0) as i32 * TILE_SIZE as i32,
                         (HEIGHT * TILE_SIZE) as i32
-                            - (*y + self.coords.1 + 1) as i32 * TILE_SIZE as i32,
+                            - (y + self.coords.1 + 1) as i32 * TILE_SIZE as i32,
                         TILE_SIZE,
                         TILE_SIZE,
                     ),
