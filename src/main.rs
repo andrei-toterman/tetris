@@ -128,6 +128,10 @@ fn main() {
                 tetrimino.advance(movement);
             } else if movement == Movement::Down {
                 let current_state_coords = tetrimino.current_state();
+                if current_state_coords.iter().all(|&(_, y)| y >= HEIGHT as i8) {
+                    println!("game over");
+                    break 'game;
+                }
                 field.set_occupied(current_state_coords, tetrimino.texture);
 
                 let cleared_lines = field.update_lines(current_state_coords);
